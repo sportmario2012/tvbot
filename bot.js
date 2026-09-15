@@ -3,16 +3,16 @@ import { Bot, InlineKeyboard } from "grammy";
 import "dotenv/config";
 
 const BOT_TOKEN = process.env.BOT_TOKEN;
-const WEBAPP_URL = process.env.WEBAPP_URL || "https://tuo-dominio.example";
+const WEBAPP_URL = process.env.WEBAPP_URL || "https://sportmario2012.github.io/tvbot/index.html";
 
 // 1. INSERISCI L'ID DEL TUO CANALE PRIVATO (Deve iniziare con -100)
-const ID_CANALE_PRIVATO = process.env.ID_CANALE_PRIVATO || "-100XXXXXXXXXX"; 
+const ID_CANALE_PRIVATO = process.env.ID_CANALE_PRIVATO || "-1003995756925"; 
 
 // 2. INSERISCI IL TUO LINK D'INVITO REALE AD APPROVAZIONE DEL CANALE PRIVATO
-const LINK_CANALE_PRIVATO = "https://t.me";
+const LINK_CANALE_PRIVATO = "https://t.me/+p23Z60_C5TJkYjRk";
 
 // 3. INSERISCI IL TUO ID UTENTE TELEGRAM PERSONALE
-const ID_AMMINISTRATORE = parseInt(process.env.ID_AMMINISTRATORE) || 123456789; 
+const ID_AMMINISTRATORE = parseInt(process.env.ID_AMMINISTRATORE) || 6791584775; 
 
 if (!BOT_TOKEN) {
   console.error("❌ Manca BOT_TOKEN nelle variabili di Railway!");
