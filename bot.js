@@ -28,10 +28,17 @@ let globalChannelsMap = {};
 let channelCounter = 0;
 let isLoaded = false;
 
+// Sostituisci solo questa funzione nel tuo bot.js per sbloccare i filtri di GitHub
 async function fetchAllChannels() {
   try {
     console.log("⏳ Avvio scaricamento playlist da GitHub Tundrak...");
-    const response = await fetch(m3uUrl);
+    
+    // Configurazione Headers per simulare un browser reale ed evitare blocchi
+    const response = await fetch(m3uUrl, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36'
+      }
+    });
     
     if (!response.ok) throw new Error(`Server di GitHub ha risposto con stato: ${response.status}`);
     
@@ -80,6 +87,7 @@ async function fetchAllChannels() {
     setTimeout(fetchAllChannels, 15000);
   }
 }
+
 
 function getMainMenu() {
   const keyboard = new InlineKeyboard();
