@@ -3,9 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Segnale — Live TV</title>
+  <title>Segnale TV — Tundrak IPTV Player</title>
+  <!-- Script Telegram WebApp -->
   <script src="https://telegram.org"></script>
-  <!-- Libreria di riproduzione video HLS universale -->
+  <!-- Motore HLS per riproduzione flussi streaming video .m3u8 -->
   <script src="https://jsdelivr.net"></script>
   <style>
     :root {
@@ -23,35 +24,31 @@
     h1 { font-size: 24px; margin: 0 0 4px 0; }
     .subtitle { color: #708499; margin: 0 0 16px 0; font-size: 13px; }
     
-    /* 📺 PLAYER VIDEO INTEGRATO */
     .player-container {
       width: 100%; background: #000; border-radius: 16px; overflow: hidden;
       aspect-ratio: 16 / 9; margin-bottom: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);
     }
     video { width: 100%; height: 100%; display: block; }
 
-    /* Widget Info Canale */
     .livestream-widget { background-color: var(--widget-bg); border-radius: 16px; padding: 14px; margin-bottom: 20px; }
     .livestream-header { display: flex; justify-content: space-between; align-items: center; }
     .livestream-info h3 { margin: 0; font-size: 18px; font-weight: 700; }
     .livestream-info p { margin: 4px 0 0 0; font-size: 12px; color: var(--widget-text); }
     
     .btn-join { background-color: var(--accent-color); color: white; border: none; border-radius: 20px; padding: 8px 18px; font-size: 14px; font-weight: 600; cursor: pointer; }
-    
     .guidatv-box { background-color: rgba(0, 0, 0, 0.04); border-radius: 12px; padding: 10px 14px; margin-top: 12px; font-size: 13px; }
     .guidatv-title { font-weight: 700; font-size: 11px; color: var(--accent-color); text-transform: uppercase; margin-bottom: 4px; }
 
     .search-bar { margin-top: 12px; border-top: 1px solid rgba(0,0,0,0.08); padding-top: 10px; }
-    .search-bar input { border: none; background: transparent; font-size: 14px; width: 100%; outline: none; color: var(--text-color); }
+    .search-bar input { border: none; background: transparent; font-size: 14px; width: 100%; outline: none; color: var(--text-color); width: 100%; }
 
-    /* Griglia e Lista dei Canali */
     .category-title { font-size: 13px; font-weight: 700; color: #708499; margin: 15px 0 8px 4px; text-transform: uppercase; }
-    .channel-list { background: var(--card-bg); border-radius: 16px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.05); margin-bottom: 16px; }
+    .channel-list { background: var(--card-bg); border-radius: 16px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.05); margin-bottom: 16px; max-height: 350px; overflow-y: auto; }
     .channel-item { padding: 12px 16px; border-bottom: 1px solid var(--border-color); cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
     .channel-item:last-child { border-bottom: none; }
-    .channel-left { display: flex; align-items: center; gap: 12px; }
     
-    .channel-logo { width: 36px; height: 36px; border-radius: 8px; object-fit: contain; background: #fff; border: 1px solid #e0e0e0; }
+    .channel-left { display: flex; align-items: center; gap: 12px; }
+    .channel-avatar { width: 36px; height: 36px; border-radius: 8px; background-color: var(--accent-color); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; }
     .channel-name { font-size: 15px; font-weight: 500; }
     .live-badge { color: #e53935; font-size: 12px; font-weight: 700; display: flex; align-items: center; gap: 4px; }
     .live-badge::before { content: "●"; color: #e53935; }
@@ -62,16 +59,14 @@
   <h1>Segnale</h1>
   <p class="subtitle">Canali live con palinsesto e loghi ufficiali</p>
 
-  <!-- Player Video Attivo -->
   <div class="player-container">
     <video id="video-player" controls autoplay playsinline poster="https://unsplash.com"></video>
   </div>
 
-  <!-- Schermata Info e Ricerca -->
   <div class="livestream-widget">
     <div class="livestream-header">
       <div class="livestream-info">
-        <h3 id="current-channel-title">Seleziona un canale</h3>
+        <h3 id="current-channel-title">Caricamento canali...</h3>
         <p id="viewer-count">-</p>
       </div>
       <button class="btn-join" onclick="playCurrentStream()">Play ⚡</button>
@@ -79,7 +74,7 @@
     
     <div class="guidatv-box">
       <div class="guidatv-title">In onda adesso 🕒</div>
-      <div id="guidatv-content">Scegli un canale dalla lista in basso per avviare il video.</div>
+      <div id="guidatv-content">Sincronizzazione della lista di Tundrak in corso...</div>
     </div>
 
     <div class="search-bar">
@@ -87,7 +82,6 @@
     </div>
   </div>
 
-  <!-- Contenitore dinamico delle categorie e dei canali -->
   <div id="categories-container"></div>
 
   <script>
@@ -95,73 +89,82 @@
     tg.ready();
     tg.expand();
 
-    // Database canali stabili con flussi diretti M3U8 compatibili con i player mobili
-    const database = {
-      "📺 Canali Nazionali": [
-        { name: "Rai 1 HD", logo: "https://wikimedia.org", url: "https://progettotv.it" },
-        { name: "Rai 2 HD", logo: "https://wikimedia.org", url: "https://progettotv.it" },
-        { name: "Rai 3 HD", logo: "https://wikimedia.org", url: "https://progettotv.it" },
-        { name: "Canale 5 HD", logo: "https://wikimedia.org", url: "https://progettotv.it" },
-        { name: "Italia 1 HD", logo: "https://wikimedia.org", url: "https://progettotv.it" },
-        { name: "Rete 4 HD", logo: "https://wikimedia.org", url: "https://progettotv.it" },
-        { name: "LA7 HD", logo: "https://wikimedia.org", url: "https://progettotv.it" },
-        { name: "TV8 HD", logo: "https://wikimedia.org", url: "https://progettotv.it" },
-        { name: "NOVE HD", logo: "https://wikimedia.org", url: "https://progettotv.it" }
-      ],
-      "⚽ Sport & Calcio": [
-        { name: "Rai Sport HD", logo: "https://wikimedia.org", url: "https://progettotv.it" },
-        { name: "Sportitalia HD", logo: "https://wikimedia.org", url: "https://progettotv.it" },
-        { name: "Supertennis HD", logo: "https://wikimedia.org", url: "https://progettotv.it" },
-        { name: "Radio TV Serie A", logo: "https://wikimedia.org", url: "https://progettotv.it" }
-      ]
-    };
+    // URL grezzo corretto fornito per estrarre tutti i canali
+    const m3uUrl = "https://githubusercontent.com";
+    // Proxy CORS pubblico per impedire il blocco del browser dello smartphone durante la lettura del file M3U
+    const corsProxy = "https://allorigins.win";
 
+    let allChannels = [];
     let activeUrl = "";
-    const fakePrograms = [
-      "Diretta Evento / Rassegna Live", "Match del Giorno / Campionato",
-      "TG Notiziario flash", "Film d'Intrattenimento Pomeridiano",
-      "Approfondimento Speciale Sport"
-    ];
+    const fakePrograms = ["TG Diretta Nazionale", "Match di Campionato Live", "Talk Show Pomeridiano", "Film HD Prima Visione", "Documentario Esplorativo"];
 
-    // Mostra tutte le categorie e i canali all'avvio dell'app
-    function renderDatabase(filterQuery = "") {
+    async function loadChannels() {
       const container = document.getElementById('categories-container');
-      let html = "";
-
-      for (const [categoryName, channels] of Object.entries(database)) {
-        const filteredChannels = channels.filter(ch => ch.name.toLowerCase().includes(filterQuery.toLowerCase()));
+      try {
+        const response = await fetch(corsProxy + encodeURIComponent(m3uUrl));
+        if (!response.ok) throw new Error("Errore network proxy");
+        const text = await response.text();
         
-        if (filteredChannels.length > 0) {
-          html += `<div class="category-title">${categoryName}</div>`;
-          html += `<div class="channel-list">`;
-          
-          filteredChannels.forEach(ch => {
-            html += `
-              <div class="channel-item" onclick="selectChannel('${ch.name.replace(/'/g, "\\'")}', '${ch.url}')">
-                <div class="channel-left">
-                  <img class="channel-logo" src="${ch.logo}" alt="">
-                  <span class="channel-name">${ch.name}</span>
-                </div>
-                <span class="live-badge">LIVE</span>
-              </div>
-            `;
-          });
-          html += `</div>`;
+        const lines = text.split('\n');
+        let currentChannel = null;
+
+        for (let line of lines) {
+          line = line.trim();
+          if (line.startsWith("#EXTINF:")) {
+            const nameIndex = line.lastIndexOf(',');
+            const name = nameIndex !== -1 ? line.substring(nameIndex + 1).trim() : "Canale Alternativo";
+            currentChannel = { name: name, url: "" };
+          } else if (line.startsWith("http") && currentChannel) {
+            currentChannel.url = line;
+            allChannels.push(currentChannel);
+            currentChannel = null;
+          }
         }
+
+        renderChannelsList(allChannels);
+        
+        if (allChannels.length > 0) {
+          selectChannel(allChannels[0].name, allChannels[0].url);
+        }
+      } catch (error) {
+        container.innerHTML = `<p style="padding:16px; text-align:center; color:#e53935;">Errore CORS o di caricamento dall'URL Tundrak. Controlla la connessione.</p>`;
       }
-      container.innerHTML = html || "<p style='padding:16px; text-align:center; color:#708499;'>Nessun canale trovato</p>";
     }
 
-    // Cambia il canale e lo riproduce
+    function renderChannelsList(channels) {
+      const container = document.getElementById('categories-container');
+      if (channels.length === 0) {
+        container.innerHTML = "<p style='padding:16px; text-align:center;'>Nessun canale trovato</p>";
+        return;
+      }
+
+      let html = `<div class="category-title">EMITTENTI NAZIONALI TUNDRAK (${channels.length})</div>`;
+      html += `<div class="channel-list">`;
+      
+      channels.forEach(ch => {
+        const primaLettera = ch.name.charAt(0).toUpperCase();
+        html += `
+          <div class="channel-item" onclick="selectChannel('${ch.name.replace(/'/g, "\\'")}', '${ch.url}')">
+            <div class="channel-left">
+              <div class="channel-avatar">${primaLettera}</div>
+              <span class="channel-name">${ch.name}</span>
+            </div>
+            <span class="live-badge">LIVE</span>
+          </div>
+        `;
+      });
+      html += `</div>`;
+      container.innerHTML = html;
+    }
+
     function selectChannel(name, url) {
       activeUrl = url;
       document.getElementById('current-channel-title').innerText = name;
-      document.getElementById('viewer-count').innerText = `${(Math.floor(Math.random() * 3400) + 210).toLocaleString('it-IT')} spettatori`;
+      document.getElementById('viewer-count').innerText = `${(Math.floor(Math.random() * 4500) + 120).toLocaleString('it-IT')} spettatori`;
       document.getElementById('guidatv-content').innerHTML = `<strong>${fakePrograms[Math.floor(Math.random() * fakePrograms.length)]}</strong>`;
       playCurrentStream();
     }
 
-    // Gestione del Player Video HLS (Risolve il problema dei canali che non partono)
     function playCurrentStream() {
       const video = document.getElementById('video-player');
       if (!activeUrl) return;
@@ -173,6 +176,22 @@
         hls.on(Hls.Events.MANIFEST_PARSED, function() {
           video.play().catch(() => {});
         });
-      } 
+      } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+        video.src = activeUrl;
+        video.addEventListener('loadedmetadata', function() {
+          video.play().catch(() => {});
+        });
+      }
+    }
 
+    function filterChannels() {
+      const query = document.getElementById('search-input').value.toLowerCase();
+      const filtered = allChannels.filter(ch => ch.name.toLowerCase().includes(query));
+      renderChannelsList(filtered);
+    }
+
+    window.onload = loadChannels;
+  </script>
+</body>
+</html>
 
