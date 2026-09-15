@@ -1,28 +1,28 @@
-// bot.js — Versione Definitiva Statica, Istantanea e Ottimizzata per Railway
+// bot.js — Versione Definitiva Completa con Auto-Configurazione del Menu Button
 import { Bot, InlineKeyboard } from "grammy";
 import "dotenv/config";
 
+// Lettura delle variabili d'ambiente fornite da Railway
 const BOT_TOKEN = process.env.BOT_TOKEN;
-const WEBAPP_URL = process.env.WEBAPP_URL || "https://sportmario2012.github.io/tvbot/index.html";
+const WEBAPP_URL = process.env.WEBAPP_URL || "https://tuo-dominio.example";
 
 // 1. INSERISCI L'ID DEL TUO CANALE PRIVATO (Deve iniziare con -100)
-const ID_CANALE_PRIVATO = process.env.ID_CANALE_PRIVATO || "-1003995756925"; 
+const ID_CANALE_PRIVATO = process.env.ID_CANALE_PRIVATO || "-100XXXXXXXXXX"; 
 
 // 2. INSERISCI IL TUO LINK D'INVITO REALE AD APPROVAZIONE DEL CANALE PRIVATO
-const LINK_CANALE_PRIVATO = "https://t.me/+p23Z60_C5TJkYjRk";
+const LINK_CANALE_PRIVATO = "https://t.me";
 
-// 3. INSERISCI IL TUO ID UTENTE TELEGRAM PERSONALE
-const ID_AMMINISTRATORE = parseInt(process.env.ID_AMMINISTRATORE) || 6791584775; 
+// 3. INSERISCI IL TUO ID UTENTE TELEGRAM PERSONALE (Esempio: 123456789)
+const ID_AMMINISTRATORE = parseInt(process.env.ID_AMMINISTRATORE) || 123456789; 
 
 if (!BOT_TOKEN) {
-  console.error("❌ Manca BOT_TOKEN nelle variabili di Railway!");
+  console.error("❌ Errore fatale: Manca BOT_TOKEN nelle variabili d'ambiente di Railway!");
   process.exit(1);
 }
 
 const bot = new Bot(BOT_TOKEN);
 
-// Database statico pre-indicizzato con i flussi diretti stabili di Tundrak
-// Questo azzera i tempi di caricamento e i blocchi IP su Railway
+// Database canali statico integrato (Previene i blocchi IP di GitHub e i timeout su Railway)
 let categories = {
   "📺 GENERALISTI": [
     { id: "ch_1", name: "Rai 1 HD", url: "https://progettotv.it" },
@@ -39,33 +39,17 @@ let categories = {
     { id: "ch_10", name: "Rai Sport HD", url: "https://progettotv.it" },
     { id: "ch_11", name: "Sportitalia HD", url: "https://progettotv.it" },
     { id: "ch_12", name: "Supertennis HD", url: "https://progettotv.it" },
-    { id: "ch_13", name: "Radio TV Serie A", url: "https://progettotv.it" },
-    { id: "ch_14", name: "Eurosport 1", url: "https://progettotv.it" },
-    { id: "ch_15", name: "Eurosport 2", url: "https://progettotv.it" }
-  ],
-  "🎬 INTRATTENIMENTO": [
-    { id: "ch_16", name: "Rai 4 HD", url: "https://progettotv.it" },
-    { id: "ch_17", name: "20 Mediaset HD", url: "https://progettotv.it" },
-    { id: "ch_18", name: "Iris HD", url: "https://progettotv.it" },
-    { id: "ch_19", name: "Rai Movie HD", url: "https://progettotv.it" },
-    { id: "ch_20", name: "Cielo HD", url: "https://progettotv.it" },
-    { id: "ch_21", name: "Giallo HD", url: "https://progettotv.it" }
-  ],
-  "📰 NEWS": [
-    { id: "ch_22", name: "Rai News 24 HD", url: "https://progettotv.it" },
-    { id: "ch_23", name: "Sky TG24 HD", url: "https://progettotv.it" },
-    { id: "ch_24", name: "TGCOM 24 HD", url: "https://progettotv.it" }
+    { id: "ch_13", name: "Radio TV Serie A", url: "https://progettotv.it" }
   ]
 };
 
-// Genera una mappa piatta per la selezione rapida tramite ID
+// Generazione mappa piatta per l'intercettazione rapida tramite ID
 let globalChannelsMap = {};
 Object.values(categories).forEach(cat => {
-  cat.forEach(ch => {
-    globalChannelsMap[ch.id] = ch;
-  });
+  cat.forEach(ch => { globalChannelsMap[ch.id] = ch; });
 });
 
+// Tastiera principale
 function getMainMenu() {
   const keyboard = new InlineKeyboard();
   const keys = Object.keys(categories);
@@ -73,14 +57,14 @@ function getMainMenu() {
     keyboard.text(cat, `cat_${index}`);
     if (index % 2 === 1) keyboard.row();
   });
-  keyboard.row().webApp("📡 Apri Web App con Loghi", WEBAPP_URL);
+  keyboard.row().webApp("📡 Apri Web App Completa", WEBAPP_URL);
   return keyboard;
 }
 
+// Sotto-menu dei canali
 function getChannelsMenu(categoryKey) {
   const keyboard = new InlineKeyboard();
   const channels = categories[categoryKey] || [];
-
   channels.forEach((ch) => {
     const viewers = (Math.random() * (7.4 - 1.1) + 1.1).toFixed(1);
     keyboard.text(`📺 ${ch.name} [👥 ${viewers}K]`, ch.id);
@@ -90,7 +74,7 @@ function getChannelsMenu(categoryKey) {
   return keyboard;
 }
 
-// Comando /start - Ora risponde IMMEDIATAMENTE senza clessidre
+// Comando /start
 bot.command("start", async (ctx) => {
   await ctx.reply(
     "✨ **Benvenuto su SEGNALE TV** ✨\n\n" +
@@ -100,6 +84,7 @@ bot.command("start", async (ctx) => {
   );
 });
 
+// Gestore delle Callback delle tastiere in linea (Senza blocchi di byte)
 bot.on("callback_query:data", async (ctx) => {
   const data = ctx.callbackQuery.data;
 
@@ -122,6 +107,8 @@ bot.on("callback_query:data", async (ctx) => {
     const foundChannel = globalChannelsMap[data];
     if (foundChannel) {
       const liveViewers = Math.floor(Math.random() * 6300) + 450;
+      
+      // Quando cliccano, li indirizza alla richiesta d'accesso nel canale privato
       const streamKeyboard = new InlineKeyboard()
         .url("🔒 AVVIA DIRETTA (CANALE PRIVATO)", LINK_CANALE_PRIVATO)
         .row()
@@ -140,14 +127,14 @@ bot.on("callback_query:data", async (ctx) => {
   try { await ctx.answerCallbackQuery(); } catch (e) {}
 });
 
-// Comando rapido amministratore per pubblicare post stile Cherry Sport nel canale privato
+// Comando rapido amministratore per pubblicare post in stile Cherry Sport nel canale privato
 bot.command("pubblica", async (ctx) => {
   if (ctx.from.id !== ID_AMMINISTRATORE) return;
   const query = ctx.match ? ctx.match.trim().toLowerCase() : "";
   if (!query) return ctx.reply("Uso: `/pubblica NomeCanale`", { parse_mode: "Markdown" });
 
   const found = Object.values(globalChannelsMap).find(c => c.name.toLowerCase().includes(query));
-  if (!found) return ctx.reply("❌ Canale non trovato nell'elenco.");
+  if (!found) return ctx.reply("❌ Canale non trovato nell'elenco pre-caricato.");
 
   const spettatori = (Math.random() * (14.2 - 2.5) + 2.5).toFixed(1);
   const testoPost = `⚽ **DIRETTA STREAMING ATTIVA** ⚽\n\n📺 **Canale:** ${found.name}\n👥 **Spettatori attuali:** ${spettatori}K\n\n👉 Clicca qui sotto per aprire la diretta TV sul tuo dispositivo!`;
@@ -162,9 +149,32 @@ bot.command("pubblica", async (ctx) => {
   }
 });
 
+// Gestione preventiva degli errori di conflitto (Doppia istanza attiva)
+bot.catch((err) => {
+  console.error("❌ Errore intercettato nel runtime:", err.message);
+  if (err.message.includes("Conflict")) {
+    console.log("⚠️ Conflitto rilevato. Chiusura preventiva dell'istanza duplicata.");
+    process.exit(1);
+  }
+});
+
+// Avvio sequenziale del server
 bot.start({
-  onStart: () => {
-    console.log("🚀 Bot Telegram online su Railway con Database statico immediato!");
+  onStart: async () => {
+    console.log("🚀 Bot Telegram online su Railway!");
+    try {
+      // Forza l'iniezione automatica del Menu Button via API di Telegram
+      await bot.api.setChatMenuButton({
+        menu_button: {
+          type: "web_app",
+          text: "📡 Apri Segnale",
+          web_app: { url: WEBAPP_URL }
+        }
+      });
+      console.log("✅ Menu Button configurato automaticamente con successo!");
+    } catch (error) {
+      console.error("❌ Impossibile iniettare il Menu Button automaticamente:", error.message);
+    }
   }
 });
 
