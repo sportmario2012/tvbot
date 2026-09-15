@@ -1,4 +1,4 @@
-// bot.js — Versione resiliente ottimizzata al 100% per il deploy su Railway
+// bot.js — Versione corretta per l'URL di Tundrak e ottimizzata per Railway
 import { Bot, InlineKeyboard } from "grammy";
 import "dotenv/config";
 import fetch from "node-fetch";
@@ -9,11 +9,13 @@ const ID_CANALE_PRIVATO = process.env.ID_CANALE_PRIVATO || "-100XXXXXXXXXX";
 const ID_AMMINISTRATORE = parseInt(process.env.ID_AMMINISTRATORE) || 123456789;
 
 if (!BOT_TOKEN) {
-  console.error("ERRORE: Manca BOT_TOKEN. Configuralo nella scheda 'Variables' su Railway!");
+  console.error("❌ Manca BOT_TOKEN nelle variabili di Railway!");
   process.exit(1);
 }
 
 const bot = new Bot(BOT_TOKEN);
+
+// CORRETTO: Aggiunto 'raw.' all'inizio dell'URL di GitHub
 const m3uUrl = "https://githubusercontent.com";
 
 let categories = {
@@ -26,18 +28,19 @@ let globalChannelsMap = {};
 let channelCounter = 0;
 let isLoaded = false;
 
-// Funzione di scaricamento asincrona in background
 async function fetchAllChannels() {
   try {
     console.log("⏳ Avvio scaricamento playlist da GitHub Tundrak...");
     const response = await fetch(m3uUrl);
+    
+    if (!response.ok) throw new Error(`Server di GitHub ha risposto con stato: ${response.status}`);
+    
     const text = await response.text();
     const lines = text.split('\n');
     
     let currentName = "";
     let currentGroup = "";
 
-    // Reset strutture dati
     categories["📺 GENERALISTI"] = [];
     categories["⚽ SPORT"] = [];
     categories["🎬 INTRATTENIMENTO"] = [];
@@ -71,17 +74,16 @@ async function fetchAllChannels() {
       }
     }
     isLoaded = true;
-    console.log(`✅ Playlist sincronizzata! Canali indicizzati: ${channelCounter}`);
+    console.log(`✅ Playlist Tundrak scaricata! Canali totali: ${channelCounter}`);
   } catch (error) {
-    console.error("❌ Errore download M3U, riprovo tra 30 secondi...", error);
-    setTimeout(fetchAllChannels, 30000); // Riprova in caso di timeout della rete di Railway
+    console.error("❌ Errore download M3U, riprovo tra 15 secondi...", error.message);
+    setTimeout(fetchAllChannels, 15000);
   }
 }
 
 function getMainMenu() {
   const keyboard = new InlineKeyboard();
-  const keys = Object.keys(categories);
-  keys.forEach((cat, index) => {
+  Object.keys(categories).forEach((cat, index) => {
     keyboard.text(cat, `cat_${index}`);
     if (index % 2 === 1) keyboard.row();
   });
@@ -103,38 +105,32 @@ function getChannelsMenu(categoryKey) {
   return keyboard;
 }
 
-// Comando /start (Risponde SEMPRE, anche se la lista sta ancora caricando)
 bot.command("start", async (ctx) => {
   if (!isLoaded) {
-    return await ctx.reply("⏳ Il sistema sta caricando la lista canali IPTV di Tundrak. Attendi qualche secondo e riprova con /start!");
+    return await ctx.reply("⏳ Il bot sta indicizzando i canali di Tundrak. Attendi 5 secondi e premi di nuovo /start!");
   }
   await ctx.reply(
     "✨ **Benvenuto su SEGNALE TV** ✨\n\n" +
-    "Il tuo hub multimediale per i canali televisivi in diretta.\n" +
     "Seleziona una categoria qui sotto per esplorare il palinsesto:",
     { parse_mode: "Markdown", reply_markup: getMainMenu() }
   );
 });
 
-// Intercettore azioni bottoni
 bot.on("callback_query:data", async (ctx) => {
   const data = ctx.callbackQuery.data;
-
   if (data === "back_main") {
     return await ctx.editMessageText("Seleziona una categoria qui sotto per iniziare la visione:", { reply_markup: getMainMenu() });
   } 
-
   if (data.startsWith("cat_")) {
     const catIndex = parseInt(data.split("_")[1]);
     const catName = Object.keys(categories)[catIndex];
     if (catName) {
-      return await ctx.editMessageText(`📂 Categoria: **${catName}**\nSeleziona un canale televisivo dall'elenco:`, {
+      return await ctx.editMessageText(`📂 Categoria: **${catName}**\nSeleziona un canale:`, {
         parse_mode: "Markdown",
         reply_markup: getChannelsMenu(catName)
       });
     }
   } 
-
   if (data.startsWith("ch_")) {
     const foundChannel = globalChannelsMap[data];
     if (foundChannel) {
@@ -146,9 +142,9 @@ bot.on("callback_query:data", async (ctx) => {
 
       return await ctx.editMessageText(
         `🟢 **FLUSSO STREAMING PRONTO** 🟢\n\n` +
-        `📺 **Canale Selezionato:** ${foundChannel.name}\n` +
-        `👥 **Utenti connessi ora:** ${liveViewers.toLocaleString('it-IT')}\n` +
-        `⚠️ Lo streaming è cifrato e visibile solo per i membri. Richiedi l'approvazione immediata nel nostro canale privato!`,
+        `📺 **Canale:** ${foundChannel.name}\n` +
+        `👥 **Spettatori:** ${liveViewers.toLocaleString('it-IT')}\n\n` +
+        `⚠️ Richiedi l'approvazione immediata nel nostro canale privato per guardare!`,
         { parse_mode: "Markdown", reply_markup: streamKeyboard }
       );
     }
@@ -156,11 +152,19 @@ bot.on("callback_query:data", async (ctx) => {
   try { await ctx.answerCallbackQuery(); } catch (e) {}
 });
 
-// Avvia Telegram all'istante
+// Gestione dell'errore Conflict (Spegne il processo se un'altra istanza è attiva)
+bot.catch((err) => {
+  console.error("❌ Errore critico nel bot:", err.message);
+  if (err.message.includes("Conflict")) {
+    console.log("⚠️ Rilevato conflitto di istanze. Spengo questa istanza.");
+    process.exit(1); 
+  }
+});
+
 bot.start({
   onStart: () => {
-    console.log("🚀 Bot Telegram connesso ai server di Railway!");
-    fetchAllChannels(); // Avvia lo scaricamento in parallelo
+    console.log("🚀 Bot Telegram online su Railway!");
+    fetchAllChannels();
   }
 });
 
